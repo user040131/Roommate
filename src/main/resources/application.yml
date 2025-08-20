@@ -1,0 +1,9 @@
+jwt:
+  issuer: roommate-app
+  secret: "change-this-to-a-very-long-random-secret-at-least-256-bits--------------------------------"
+  access-ttl-seconds:  600     # 10분
+  refresh-ttl-seconds: 604800 # 7일
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: update
