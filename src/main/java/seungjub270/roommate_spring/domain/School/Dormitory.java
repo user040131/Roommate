@@ -25,6 +25,17 @@ public class Dormitory {
     @JoinColumn(name = "school_id", nullable = false)
     private School school;
 
+    public void appointSchool(School school) {
+        this.school = school;
+    }
+
     @OneToMany(mappedBy = "dormitory", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Room> rooms = new ArrayList<>();
+
+    public void addRoom(Room room){
+        if(!rooms.contains(room)){
+            rooms.add(room);
+        }
+        room.appointDormitory(this);
+    }
 }

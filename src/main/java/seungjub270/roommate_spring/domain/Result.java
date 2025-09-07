@@ -35,4 +35,8 @@ public class Result {
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "school_id", nullable = false)
     private School school;
+
+    public void appointSchool(School school) {
+        this.school = school;
+    }
 }

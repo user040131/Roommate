@@ -73,10 +73,26 @@ public class Student {
     @JoinColumn(name = "account_id", nullable = false)
     private Account account;
 
+    public void appointAccount(Account account){
+        this.account = account;
+    }
+
     @OneToOne(mappedBy = "student", fetch = FetchType.LAZY, orphanRemoval = true, cascade = CascadeType.ALL)
     private Characteristic characteristic;
 
+    public void appointCharacteristic(Characteristic characteristic){
+        this.characteristic = characteristic;
+        characteristic.appointStudent(this);
+    }
+
     @OneToOne(mappedBy = "student", fetch = FetchType.LAZY, orphanRemoval = true, cascade = CascadeType.ALL)
     private Introduction introduction;
+
+    public void appointIntroduction(Introduction introduction){
+        this.introduction = introduction;
+        introduction.appointStudent(this);
+    }
+
+    public Introduction getIntroduction(){ return this.introduction; }
 
 }

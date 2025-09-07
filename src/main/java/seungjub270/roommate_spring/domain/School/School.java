@@ -34,14 +34,38 @@ public class School {
     @OneToMany(mappedBy = "school", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Dormitory> dormitoryList = new ArrayList<>();
 
+    public void appointDormitoryList(Dormitory dormitory){
+        if(!dormitoryList.contains(dormitory)){
+            dormitoryList.add(dormitory);
+        }
+        dormitory.appointSchool(this);
+    }
+
     @OneToOne(mappedBy = "school", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private ProfileChangeRequest profileChangeRequest;
+
+    public void appointProfileChangeRequest(ProfileChangeRequest profileChangeRequest){
+        this.profileChangeRequest = profileChangeRequest;
+        profileChangeRequest.appointSchool(this);
+    }
 
     @OneToOne(mappedBy = "school", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private Result result;
 
+    public void appointResult(Result result){
+        this.result = result;
+        result.appointSchool(this);
+    }
+
     @OneToMany(mappedBy = "school", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Account> accounts = new ArrayList<>();
+
+    public void appointAccounts(Account account){
+        if(!accounts.contains(account)){
+            accounts.add(account);
+        }
+        account.appointSchool(this);
+    }
 
     @Builder
     public School(String schoolName, String schoolX_Coordinate, float schoolY_Coordinate, List<Dormitory> dormitoryList) {

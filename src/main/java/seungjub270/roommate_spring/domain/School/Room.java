@@ -23,4 +23,8 @@ public class Room {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "dormitory_id", nullable = false)
     private Dormitory dormitory;
+
+    public void appointDormitory(Dormitory dormitory) {
+        this.dormitory = dormitory;
+    }
 }

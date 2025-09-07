@@ -33,18 +33,39 @@ public class Account implements UserDetails {
     @Override public boolean isAccountNonLocked() { return true; }
     @Override public boolean isCredentialsNonExpired() { return true; }
     @Override public boolean isEnabled() { return true; }
+    public Student getStudent() { return this.student; }
+    public Manager getManager() { return this.manager; }
 
     @OneToOne(mappedBy = "account", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     public Student student;
 
+    public void appointStudent(Student student) {
+        this.student = student;
+        student.appointAccount(this);
+    }
+
     @OneToOne(mappedBy = "account", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     public Manager manager;
+
+    public void appointManager(Manager manager) {
+        this.manager = manager;
+        manager.appointAccount(this);
+    }
 
     @OneToOne(mappedBy = "account", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     public RefreshToken refreshToken;
 
+    public void appointRefreshToken(RefreshToken refreshToken) {
+        this.refreshToken = refreshToken;
+        refreshToken.appointAccount(this);
+    }
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "school_id", nullable = false)
     public School school;
+
+    public void appointSchool(School school){
+        this.school = school;
+    }
 }
 

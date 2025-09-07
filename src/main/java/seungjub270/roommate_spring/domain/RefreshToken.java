@@ -35,4 +35,8 @@ public class RefreshToken {
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "account_id", nullable = false)
     private Account account;
+
+    public void appointAccount(Account account) {
+        this.account = account;
+    }
 }

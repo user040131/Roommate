@@ -25,4 +25,8 @@ public class Manager {
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "account_id", nullable = false)
     private Account account;
+
+    public void appointAccount(Account account) {
+        this.account = account;
+    }
 }

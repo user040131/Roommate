@@ -69,4 +69,8 @@ public class Characteristic {
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "student_id")
     private Student student;
+
+    public void appointStudent(Student student) {
+        this.student = student;
+    }
 }

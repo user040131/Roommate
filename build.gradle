@@ -38,6 +38,7 @@ dependencies {
     // 테스트에서도 롬복 쓰면
     testCompileOnly 'org.projectlombok:lombok'
     testAnnotationProcessor 'org.projectlombok:lombok'
+    implementation 'org.springframework.ai:spring-ai-starter-model-openai'
 }
 
 dependencyManagement {

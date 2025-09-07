@@ -14,47 +14,40 @@ public class Introduction {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long introductionId;
 
-    @Column
-    private int onetoone;
-    @Column
-    private int onetotwo;
-    @Column
-    private int onetothree;
-    @Column
-    private int onetofour;
-    @Column
-    private int twotoone;
-    @Column
-    private int twototwo;
-    @Column
-    private int twotothree;
-    @Column
-    private int twotofour;
-    @Column
-    private int twotofive;
-    @Column
-    private int threetoone;
-    @Column
-    private int threetotwo;
+    @Column private Integer onetoone;
+    @Column private Integer onetotwo;
+    @Column private Integer onetothree;
+    @Column private Integer onetofour;
+
+    @Column private Integer twotoone;
+    @Column private Integer twototwo;
+
+    @Column private Integer threetoone;
+    @Column private Integer threetotwo;
+
+    @Column private Integer lastIntroAnalyze;
 
     @Builder
-    public Introduction(int onetoone, int onetotwo, int onetothree, int onetofour,
-                        int twotoone, int twototwo, int twotothree, int twotofour, int twotofive,
-                        int threetoone, int threetotwo) {
+    public Introduction(Integer onetoone, Integer onetotwo, Integer onetothree, Integer onetofour,
+                        Integer twotoone, Integer twototwo,
+                        Integer threetoone, Integer threetotwo,
+                        Integer lastIntroAnalyze){
         this.onetoone = onetoone;
         this.onetotwo = onetotwo;
         this.onetothree = onetothree;
         this.onetofour = onetofour;
         this.twotoone = twotoone;
         this.twototwo = twototwo;
-        this.twotothree = twotothree;
-        this.twotofour = twotofour;
-        this.twotofive = twotofive;
         this.threetoone = threetoone;
         this.threetotwo = threetotwo;
+        this.lastIntroAnalyze = lastIntroAnalyze;
     }
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "student_id")
     private Student student;
+
+    public void appointStudent(Student student){
+        this.student = student;
+    }
 }
