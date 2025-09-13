@@ -20,16 +20,10 @@ public class Student {
     private String studentName;
 
     @Column
-    private String studentEmail;
-
-    @Column
     private String studentPhone;
 
     @Column
     private int studentNumber; //학번
-
-    @Column
-    private String studentPassword;
 
     @Column
     private boolean studentGender;
@@ -40,34 +34,46 @@ public class Student {
     @Column
     private float studentDistance;
 
-    @Builder
-    public Student(String studentName, String studentEmail, String studentPhone, int studentNumber, String studentPassword, boolean studentGender, String studentAddress, float studentDistance) {
+    public Student(String studentName, String studentPhone, int studentNumber,
+                           boolean studentGender, String studentAddress, float studentDistance) {
         this.studentName = studentName;
-        this.studentEmail = studentEmail;
         this.studentPhone = studentPhone;
         this.studentNumber = studentNumber;
-        this.studentPassword = studentPassword;
         this.studentGender = studentGender;
         this.studentAddress = studentAddress;
         this.studentDistance = studentDistance;
-    } //제일 처음 생성할 때 씀
+    }
 
-    @Builder
-    public Student(String studentName, String studentEmail, String studentPhone, int studentNumber, boolean studentGender, String studentAddress, float studentDistance) {
-        this.studentName = studentName;
-        this.studentEmail = studentEmail;
-        this.studentPhone = studentPhone;
-        this.studentNumber = studentNumber;
-        this.studentPassword = studentPassword;
-        this.studentGender = studentGender;
-        this.studentAddress = studentAddress;
-        this.studentDistance = studentDistance;
-    } //개인정보 요청 변경이 오면 사용
+    public static Student newStudent(String studentName, String studentPhone, int studentNumber,
+                                     boolean studentGender, String studentAddress, float studentDistance) {
+        Student student = new Student(studentName, studentPhone, studentNumber, studentGender, studentAddress,
+                studentDistance);
+        return student;
+    }
 
-    @Builder
-    public Student(String studentPassword){
-        this.studentPassword = studentPassword;
-    } //학생 개인이 비밀번호 변경할 때 사용
+    //    @Builder
+//    public Student(String studentName, String studentEmail, String studentPhone, int studentNumber, String studentPassword, boolean studentGender, String studentAddress, float studentDistance) {
+//        this.studentName = studentName;
+//        this.studentEmail = studentEmail;
+//        this.studentPhone = studentPhone;
+//        this.studentNumber = studentNumber;
+//        this.studentPassword = studentPassword;
+//        this.studentGender = studentGender;
+//        this.studentAddress = studentAddress;
+//        this.studentDistance = studentDistance;
+//    } //제일 처음 생성할 때 씀
+//
+//    @Builder
+//    public Student(String studentName, String studentEmail, String studentPhone, int studentNumber, boolean studentGender, String studentAddress, float studentDistance) {
+//        this.studentName = studentName;
+//        this.studentEmail = studentEmail;
+//        this.studentPhone = studentPhone;
+//        this.studentNumber = studentNumber;
+//        this.studentPassword = studentPassword;
+//        this.studentGender = studentGender;
+//        this.studentAddress = studentAddress;
+//        this.studentDistance = studentDistance;
+//    } //개인정보 요청 변경이 오면 사용
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "account_id", nullable = false)
@@ -94,5 +100,18 @@ public class Student {
     }
 
     public Introduction getIntroduction(){ return this.introduction; }
+
+    public static Student newStudent(String studentName, String studentPhone, int studentNumber, String studentAddress
+    , float studentDistance, boolean studentGender, Account account) {
+        Student s = new Student();
+        s.studentName = studentName;
+        s.studentPhone = studentPhone;
+        s.studentNumber = studentNumber;
+        s.studentGender = studentGender;
+        s.studentAddress = studentAddress;
+        s.studentDistance = studentDistance;
+        s.appointAccount(account);
+        return s;
+    }
 
 }

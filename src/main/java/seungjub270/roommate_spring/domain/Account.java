@@ -14,7 +14,7 @@ public class Account implements UserDetails {
     //이거는 SecutiryContextHolder가 있어야 제대로 되는 듯
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    public Long accountId;
+    public Long id;
 
     @Column
     public String email;
@@ -22,11 +22,17 @@ public class Account implements UserDetails {
     @Column
     public String password;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     public Auth auth;
 
+    public Account() {
+    }
+
     @Override public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority("ROLE" + auth)); }
+        return List.of(new SimpleGrantedAuthority("ROLE" + auth.name())); }
+    public Long getId() { return id; }
+    public String getEmail() { return email; }
     @Override public String getUsername() { return email; }
     @Override public String getPassword() { return password; }
     @Override public boolean isAccountNonExpired() { return true; }
@@ -42,6 +48,32 @@ public class Account implements UserDetails {
     public void appointStudent(Student student) {
         this.student = student;
         student.appointAccount(this);
+    }
+
+    public Account(String email, String password, Auth auth, Manager manager) {
+        this.email = email;
+        this.password = password;
+        this.auth = auth;
+        this.manager = manager;
+    }
+
+    public static Account createNewManager(String email, String password, Auth auth, Manager manager) {
+        Account account = new Account(email, password, auth, manager);
+        account.appointManager(manager);
+        return account;
+    }
+
+    public Account(String email, String password, Auth auth, Student student) {
+        this.email = email;
+        this.password = password;
+        this.auth = auth;
+        this.student = student;
+    }
+
+    public static Account createNewStudent(String email, String password, Auth auth, Student student){
+        Account account = new Account(email, password, auth, student);
+        account.appointStudent(student);
+        return account;
     }
 
     @OneToOne(mappedBy = "account", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
@@ -66,6 +98,15 @@ public class Account implements UserDetails {
 
     public void appointSchool(School school){
         this.school = school;
+    }
+
+    public static Account newAccount(String email, String pw, Auth auth, School school){
+        Account a = new Account();
+        a.email = email;
+        a.password = pw;
+        a.auth = auth;
+        a.appointSchool(school);
+        return a;
     }
 }
 

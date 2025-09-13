@@ -14,13 +14,7 @@ public class Manager {
     private Long managerId;
 
     @Column
-    private String managerEmail;
-
-    @Column
     private int managerNumber;
-
-    @Column
-    private String managerPassword;
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "account_id", nullable = false)
@@ -28,5 +22,16 @@ public class Manager {
 
     public void appointAccount(Account account) {
         this.account = account;
+    }
+
+    public Manager(int managerNumber) {
+        this.managerNumber = managerNumber;
+    }
+
+    public static Manager newManager(int managerNumber, Account account) {
+        Manager m = new Manager();
+        m.managerNumber = managerNumber;
+        m.appointAccount(account);
+        return m;
     }
 }

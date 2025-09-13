@@ -1,68 +1,84 @@
 package seungjub270.roommate_spring.config;
 
 import io.jsonwebtoken.*;
-import io.jsonwebtoken.security.Keys;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.stereotype.Service;
+import seungjub270.roommate_spring.config.jwt.JwtProperties;
+import seungjub270.roommate_spring.domain.Account;
 
-import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
-import java.time.Instant;
+import java.time.Duration;
+import java.util.Collections;
 import java.util.Date;
-import java.util.Map;
+import java.util.Set;
 
+@RequiredArgsConstructor
+@Service
 public class TokenProvider {
 
-    private final JwtProperties props;
-    private final SecretKey key;
+    private final JwtProperties jwtProperties;
 
-    public TokenProvider(JwtProperties props) {
-        this.props = props;
-        this.key = Keys.hmacShaKeyFor(props.secret().getBytes(StandardCharsets.UTF_8));
+    public String generateToken(Account account, Duration expiredAt){
+        Date now  = new Date();
+        return makeToken(new Date(now.getTime() + expiredAt.toMillis()), account);
     }
 
-    public String createAccessToken(String subject, String role) {
-        Instant now = Instant.now();
-        Instant exp = now.plusSeconds(props.accessTtlSeconds());
+    private String makeToken(Date expiry, Account account) {
+        Date now  = new Date();
+
         return Jwts.builder()
-                .setIssuer(props.issuer())
-                .setSubject(subject)
-                .addClaims(Map.of("role", role)) // 예: STUDENT / MANAGER
-                .setIssuedAt(Date.from(now))
-                .setExpiration(Date.from(exp))
-                .signWith(key, SignatureAlgorithm.HS256)
+                .setHeaderParam(Header.TYPE, Header.JWT_TYPE)
+                .setIssuer(jwtProperties.getIssuer())
+                .setIssuedAt(now)
+                .setExpiration(expiry)
+                .setSubject(account.getEmail())
+                .claim("id", account.getId())
+                .claim("tokenType", "accessToken")
+                .signWith(SignatureAlgorithm.HS256, jwtProperties.getSecret())
                 .compact();
     }
 
-    public String createRefreshToken(String subject) {
-        Instant now = Instant.now();
-        Instant exp = now.plusSeconds(props.refreshTtlSeconds());
+    public boolean validToken(String token)
+            throws ExpiredJwtException, IllegalArgumentException {
+            Jwts.parserBuilder()
+                    .setSigningKey(jwtProperties.getSecret())
+                    .build()
+                    .parseClaimsJws(token);
+            return true;
+    }
+
+    public Authentication getAuthentication(String token) {
+        Claims claims = getClaims(token);
+        Set<SimpleGrantedAuthority> authorities = Collections.singleton(new SimpleGrantedAuthority("ROLE_USER"));
+
+        return new UsernamePasswordAuthenticationToken(new org.springframework.security.core.userdetails.User(
+                claims.getSubject(), "", authorities), token, authorities);
+    }
+
+    public Long getUserId(String token){
+        Claims claims = getClaims(token);
+        return claims.get("id", Long.class);
+    }
+
+    public Claims getClaims(String token) {
+        return Jwts.parser()
+                .setSigningKey(jwtProperties.getSecret())
+                .parseClaimsJws(token)
+                .getBody();
+    }
+
+    public String createRefreshToken(Account account) {
+
+        Date now  = new Date();
+
         return Jwts.builder()
-                .setIssuer(props.issuer())
-                .setSubject(subject)
-                .setIssuedAt(Date.from(now))
-                .setExpiration(Date.from(exp))
-                .signWith(key, SignatureAlgorithm.HS256)
+                .setSubject(String.valueOf(account.getId()))
+                .setIssuedAt(now)
+                .setExpiration(new Date(now.getTime() + Duration.ofDays(7).toMillis()))
+                .signWith(SignatureAlgorithm.HS256, jwtProperties.getSecret())
+                .claim("tokenType", "refreshToken")
                 .compact();
-    }
-
-    public Jws<Claims> parse(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(key)
-                .requireIssuer(props.issuer())
-                .build()
-                .parseClaimsJws(token);
-    }
-
-    public String getSubject(String token) {
-        return parse(token).getBody().getSubject();
-    }
-
-    public String getRole(String token) {
-        Object v = parse(token).getBody().get("role");
-        return v == null ? null : v.toString();
-    }
-
-    public Instant getExpiration(String token) {
-        Date d = parse(token).getBody().getExpiration();
-        return d.toInstant();
     }
 }
