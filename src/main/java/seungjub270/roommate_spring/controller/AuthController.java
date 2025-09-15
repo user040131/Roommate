@@ -2,18 +2,27 @@ package seungjub270.roommate_spring.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import seungjub270.roommate_spring.config.TokenProvider;
+import seungjub270.roommate_spring.domain.Account;
+import seungjub270.roommate_spring.domain.Auth;
 import seungjub270.roommate_spring.domain.RefreshToken;
 import seungjub270.roommate_spring.dto.*;
+import seungjub270.roommate_spring.repository.AccountRepository;
 import seungjub270.roommate_spring.repository.RefreshTokenRepository;
 import seungjub270.roommate_spring.service.AuthService;
 import seungjub270.roommate_spring.service.TokenService;
+
+import java.time.Duration;
 
 @RestController
 @RequiredArgsConstructor
@@ -23,6 +32,7 @@ public class AuthController {
     private final AuthService authService;
     private final TokenService tokenService;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final AccountRepository accountRepository;
 
     //accessToken 검사할 때 만료되어 있으면 refreshtoken 기준으로 다시 만드는 메서드
     @PostMapping("/api/acsToken")
@@ -45,15 +55,60 @@ public class AuthController {
         //refreshToken, accessToken 저장방식 다시 한 번 고려하고 return 방식 생각하기
     }
 
+//    @PostMapping("/login")
+//    public ResponseEntity<TokenResponse> login(@RequestBody LoginRequest req) {
+//        try{
+//            TokenResponse tokenResponse = authService.login(req);
+//            return ResponseEntity.ok(tokenResponse);
+//        } catch (Exception e) {
+//            System.out.println(e.getMessage());
+//            e.printStackTrace();
+//            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+//        }
+//    }
+
+    @GetMapping("/login")
+    public String loginForm(Model model) {
+        model.addAttribute("form", new LoginRequest());
+        return "/auth/login";
+    }
+
     @PostMapping("/login")
-    public ResponseEntity<TokenResponse> login(@RequestBody LoginRequest req) {
+    public String login(@ModelAttribute("form") LoginRequest req, HttpServletResponse res, RedirectAttributes ra) {
+
         try{
-            TokenResponse tokenResponse = authService.login(req);
-            return ResponseEntity.ok(tokenResponse);
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            TokenResponse token = authService.login(req);
+            //액세스 토큰 생성 및 세부설정
+            ResponseCookie access = ResponseCookie.from("accessToken", token.getAccessToken())
+                    .httpOnly(true)
+                    .secure(false)
+                    .sameSite("Lax")
+                    .path("/")
+                    .maxAge(Duration.ofHours(2))
+                    .build();
+            //리프레시 토큰 생성 및 세부설정
+            ResponseCookie refresh = ResponseCookie.from("refreshToken", token.getRefreshToken())
+                    .httpOnly(true)
+                    .secure(false)
+                    .sameSite("Lax")
+                    .path("/auth")
+                    .maxAge(Duration.ofDays(4))
+                    .build();
+            //근데 세부설정을 여기서 하는게 맞냐?
+            //.addHeader에 넣고 return
+            res.addHeader("Set-Cookie", access.toString());
+            res.addHeader("Set-Cookie", refresh.toString());
+
+            if(accountRepository.findByEmail(req.getEmail())
+                    .orElseThrow(() -> new IllegalArgumentException("Invalid email"))
+                    .getAuth() == Auth.Manager){
+                return "redirect:/manager/main";
+            } else {
+                return "redirect:/student/main";
+            }
+        } catch (Exception e){
+            ra.addFlashAttribute("loginError", "이메일 또는 비밀번호가 옳지 않습니다.");
+            return "redirect:/auth/login";
         }
     }
 

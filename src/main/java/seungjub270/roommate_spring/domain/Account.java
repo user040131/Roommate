@@ -22,7 +22,6 @@ public class Account implements UserDetails {
     @Column
     public String password;
 
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     public Auth auth;
 
@@ -31,6 +30,7 @@ public class Account implements UserDetails {
 
     @Override public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority("ROLE" + auth.name())); }
+    public Auth getAuth() { return auth; }
     public Long getId() { return id; }
     public String getEmail() { return email; }
     @Override public String getUsername() { return email; }
