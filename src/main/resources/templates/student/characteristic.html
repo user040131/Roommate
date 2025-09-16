@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>생활 특성 선택</title>
+
+    <!-- ★ 스타일: 보기 좋게만 아주 간단히 -->
+    <style>
+        :root { --sky:#eaf6ff; --card:#ffffff; --btn:#1e88e5; --btn-text:#fff; --muted:#5b6b7a; --border:#d0d7e2 }
+        *{box-sizing:border-box}
+        body{margin:0; min-height:100vh; display:grid; place-items:center; background:var(--sky); font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
+        .card{width:min(760px,95vw); background:var(--card); padding:20px 20px 28px; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,.08)}
+        h1{margin:6px 0 14px}
+        .group{padding:14px 0; border-top:1px solid var(--border)}
+        .group:first-of-type{border-top:0}
+        .label{font-weight:700; margin-bottom:8px}
+        .hint{color:var(--muted); font-size:12px; margin-left:6px}
+        .opts{display:flex; flex-wrap:wrap; gap:8px}
+        .opt{padding:10px 14px; border-radius:10px; border:1px solid var(--border); background:#f8fbff; cursor:pointer}
+        .opt.selected{background:var(--btn); color:var(--btn-text); border-color:transparent}
+        .submit{margin-top:18px; width:100%; padding:12px 16px; border:0; border-radius:12px; background:var(--btn); color:var(--btn-text); font-weight:800; cursor:pointer}
+        .msg{margin:8px 0; font-size:14px}
+        .msg.err{color:#b91c1c}
+        .msg.ok{color:#166534}
+    </style>
+</head>
+<body>
+
+<main class="card">
+    <h1>생활 특성 선택</h1>
+    <p class="msg ok" th:if="${msg}" th:text="${msg}"></p>
+    <p class="msg err" th:if="${error}" th:text="${error}"></p>
+
+    <!--
+      ✅ 이 폼은 버튼을 누르면 "숨은 input" 값이 바뀜 → 백엔드로 전송
+      ✅ name은 DTO/커맨드 객체의 필드명과 동일해야 @ModelAttribute 바인딩됨
+      ✅ th:action 경로는 컨트롤러 @PostMapping URL 과 일치해야 함
+    -->
+    <form th:action="@{/student/characteristic}" method="post" id="characteristicForm">
+        <!-- Spring Security CSRF (사용 중이 아니면 무시됨) -->
+        <input type="hidden" th:name="${_csrf?.parameterName}" th:value="${_csrf?.token}"/>
+
+        <!-- ===================== 1) 취침 시간 ===================== -->
+        <!-- sleepTime: 22시 이전=0, 22~24시=1, 24시 이후=2 -->
+        <section class="group" data-name="sleepTime">
+            <div class="label">취침 시간
+                <span class="hint">22시 이전=0 / 22~24시=1 / 24시 이후=2</span>
+            </div>
+            <div class="opts">
+                <button type="button" class="opt" data-value="0">22시 이전</button>
+                <button type="button" class="opt" data-value="1">22~24시</button>
+                <button type="button" class="opt" data-value="2">24시 이후</button>
+            </div>
+            <!-- 백엔드로 전송되는 실제 값 -->
+            <input type="hidden" name="sleepTime" id="input-sleepTime" th:value="${form?.sleepTime}">
+        </section>
+
+        <!-- ===================== 2) 기상 시간 ===================== -->
+        <!-- wakeUpTime: 6=0, 6~8=1, 8=2 -->
+        <section class="group" data-name="wakeUpTime">
+            <div class="label">기상 시간
+                <span class="hint">6=0 / 6~8=1 / 8=2</span>
+            </div>
+            <div class="opts">
+                <button type="button" class="opt" data-value="0">6시</button>
+                <button type="button" class="opt" data-value="1">6~8시</button>
+                <button type="button" class="opt" data-value="2">8시</button>
+            </div>
+            <input type="hidden" name="wakeUpTime" id="input-wakeUpTime" th:value="${form?.wakeUpTime}">
+        </section>
+
+        <!-- ===================== 3) 공부 장소 ===================== -->
+        <!-- studyLocation: indoor=0, outdoor=1 -->
+        <section class="group" data-name="studyLocation">
+            <div class="label">공부 장소
+                <span class="hint">실내=0 / 실외=1</span>
+            </div>
+            <div class="opts">
+                <button type="button" class="opt" data-value="0">실내</button>
+                <button type="button" class="opt" data-value="1">실외</button>
+            </div>
+            <input type="hidden" name="studyLocation" id="input-studyLocation" th:value="${form?.studyLocation}">
+        </section>
+
+        <!-- ===================== 4) 자유 시간 장소 ===================== -->
+        <!-- freeTimeLocation: indoor=0, outdoor=1 -->
+        <section class="group" data-name="freeTimeLocation">
+            <div class="label">자유 시간 장소
+                <span class="hint">실내=0 / 실외=1</span>
+            </div>
+            <div class="opts">
+                <button type="button" class="opt" data-value="0">실내</button>
+                <button type="button" class="opt" data-value="1">실외</button>
+            </div>
+            <input type="hidden" name="freeTimeLocation" id="input-freeTimeLocation" th:value="${form?.freeTimeLocation}">
+        </section>
+
+        <!-- ===================== 5) 청결 민감도 ===================== -->
+        <!-- cleanlinessLevel: sensitive=0, insensitive=1 -->
+        <section class="group" data-name="cleanlinessLevel">
+            <div class="label">청결 민감도
+                <span class="hint">민감=0 / 둔감=1</span>
+            </div>
+            <div class="opts">
+                <button type="button" class="opt" data-value="0">민감</button>
+                <button type="button" class="opt" data-value="1">둔감</button>
+            </div>
+            <input type="hidden" name="cleanlinessLevel" id="input-cleanlinessLevel" th:value="${form?.cleanlinessLevel}">
+        </section>
+
+        <!-- ===================== 6) 냄새 민감도 ===================== -->
+        <!-- smellTolerance: sensitive=0, insensitive=1 -->
+        <section class="group" data-name="smellTolerance">
+            <div class="label">냄새 민감도
+                <span class="hint">민감=0 / 둔감=1</span>
+            </div>
+            <div class="opts">
+                <button type="button" class="opt" data-value="0">민감</button>
+                <button type="button" class="opt" data-value="1">둔감</button>
+            </div>
+            <input type="hidden" name="smellTolerance" id="input-smellTolerance" th:value="${form?.smellTolerance}">
+        </section>
+
+        <!-- ===================== 7) 흡연 여부 (boolean) ===================== -->
+        <!-- smokingHabit: 피면 true / 안 피면 false -->
+        <section class="group" data-name="smokingHabit">
+            <div class="label">흡연 여부
+                <span class="hint">흡연=true / 비흡연=false</span>
+            </div>
+            <div class="opts">
+                <button type="button" class="opt" data-value="true">흡연</button>
+                <button type="button" class="opt" data-value="false">비흡연</button>
+            </div>
+            <input type="hidden" name="smokingHabit" id="input-smokingHabit" th:value="${form?.smokingHabit}">
+        </section>
+
+        <!-- ===================== 8) 소음 민감도 ===================== -->
+        <!-- noiseTolerance: sensitive=0, insensitive=1 -->
+        <section class="group" data-name="noiseTolerance">
+            <div class="label">소음 민감도
+                <span class="hint">민감=0 / 둔감=1</span>
+            </div>
+            <div class="opts">
+                <button type="button" class="opt" data-value="0">민감</button>
+                <button type="button" class="opt" data-value="1">둔감</button>
+            </div>
+            <input type="hidden" name="noiseTolerance" id="input-noiseTolerance" th:value="${form?.noiseTolerance}">
+        </section>
+
+        <!-- ===================== 9) 외향성 (boolean) ===================== -->
+        <!-- extroversion: 혼자만의 시간 필수 X = true / 아니면 false -->
+        <section class="group" data-name="extroversion">
+            <div class="label">외향성
+                <span class="hint">외향(true) / 내향(false)</span>
+            </div>
+            <div class="opts">
+                <button type="button" class="opt" data-value="true">외향 (혼자만의 시간 필수 X)</button>
+                <button type="button" class="opt" data-value="false">내향 (혼자만의 시간 필요)</button>
+            </div>
+            <input type="hidden" name="extroversion" id="input-extroversion" th:value="${form?.extroversion}">
+        </section>
+
+        <button class="submit" type="submit">저장하기</button>
+    </form>
+</main>
+
+<!-- ★ 버튼-선택 → hidden input 값 업데이트하는 최소 JS -->
+<script>
+    // 한 그룹에서 하나만 선택되도록 하고, hidden input에 코드값을 기록한다.
+    document.addEventListener('click', function (e) {
+        const btn = e.target.closest('.opt');
+        if (!btn) return;
+
+        const group = btn.closest('.group');
+        const name  = group.dataset.name;           // 예: "sleepTime"
+        const value = btn.dataset.value;            // 예: "1" 또는 "true"
+
+        // 1) 같은 그룹의 기존 선택 해제
+        group.querySelectorAll('.opt').forEach(b => b.classList.remove('selected'));
+        // 2) 클릭한 버튼만 선택 표시
+        btn.classList.add('selected');
+
+        // 3) 해당 hidden input에 값 쓰기
+        const input = document.getElementById('input-' + name);
+        if (input) input.value = value;
+    });
+
+    // (선택) 서버에서 기존 값이 내려오면 자동으로 버튼 UI를 맞춰준다.
+    function applyPrefill() {
+        document.querySelectorAll('input[type="hidden"][id^="input-"]').forEach(input => {
+            if (!input.value) return;
+            const name  = input.id.replace('input-', '');     // "sleepTime"
+            const group = document.querySelector('.group[data-name="'+name+'"]');
+            if (!group) return;
+            const btn   = group.querySelector('.opt[data-value="'+input.value+'"]');
+            if (btn) btn.classList.add('selected');
+        });
+    }
+    applyPrefill();
+
+    // (권장) 제출 전 모든 항목 선택 확인(필요 시 주석 해제)
+    // document.getElementById('characteristicForm').addEventListener('submit', function(e){
+    //   const missing = Array.from(document.querySelectorAll('input[type="hidden"][id^="input-"]'))
+    //     .filter(i

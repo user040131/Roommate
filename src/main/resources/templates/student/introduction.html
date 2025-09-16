@@ -1,0 +1,158 @@
+<!--
+  파일 경로(권장): src/main/resources/templates/student/introduction.html
+
+  컨트롤러 예시:
+  @Controller
+  @RequestMapping("/student")
+  public class IntroductionController {
+      @GetMapping("/introduction")
+      public String form(Model model) {
+          model.addAttribute("form", new IntroductionsForm()); // intro1/2/3 필드가 있는 DTO
+          return "student/introduction";
+      }
+
+      @PostMapping("/introduction")
+      public String submit(@ModelAttribute("form") IntroductionsForm form,
+                           RedirectAttributes ra) {
+          // TODO: 저장 로직 (DB 등)
+          ra.addFlashAttribute("msg", "저장되었습니다.");
+          return "redirect:/student/introduction"; // PRG
+      }
+  }
+
+  DTO 예시 (폼 바인딩 가능 형태):
+  @Data @NoArgsConstructor
+  public class IntroductionsForm {
+      private String intro1;
+      private String intro2;
+      private String intro3;
+  }
+-->
+
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>자기소개 입력</title>
+    <style>
+        :root {
+            --sky-start:#eaf6ff; --sky-end:#d7efff; --card:#ffffffee;
+            --border:#d0d7e2; --muted:#5b6b7a; --btn:#1976d2; --btn-text:#fff;
+        }
+        *{box-sizing:border-box}
+        body{
+            margin:0; min-height:100vh; display:grid; place-items:center;
+            background:linear-gradient(180deg,var(--sky-start),var(--sky-end));
+            font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+        }
+        .card{
+            width:min(760px,94vw); background:var(--card); padding:22px;
+            border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,.08)
+        }
+        h1{margin:0 0 6px 0}
+        p.hint{margin:0 0 14px 0; color:var(--muted); font-size:14px}
+        .group{padding:14px 0; border-top:1px solid var(--border)}
+        .group:first-of-type{border-top:0}
+        .label{display:flex; justify-content:space-between; align-items:center; margin-bottom:6px}
+        .counter{font-size:12px; color:var(--muted)}
+        textarea{
+            width:100%; border:1px solid var(--border); border-radius:12px;
+            padding:12px; resize:vertical; min-height:120px; background:#f8fbff;
+        }
+        .actions{display:flex; justify-content:flex-end; gap:8px; margin-top:16px}
+        button{
+            padding:12px 16px; border:0; border-radius:12px; cursor:pointer;
+            background:var(--btn); color:var(--btn-text); font-weight:800;
+        }
+        .msg{margin:8px 0; font-size:14px}
+        .ok{color:#166534} .err{color:#b91c1c}
+    </style>
+</head>
+<body>
+
+<main class="card">
+    <h1>자기소개 입력</h1>
+    <p class="hint">아직 질문은 비워두고, 아래 세 칸에 각 500자 이내로 자유롭게 작성하세요.</p>
+
+    <!-- Flash 메시지(저장 성공/실패) -->
+    <p th:if="${msg}"   th:text="${msg}"   class="msg ok"></p>
+    <p th:if="${error}" th:text="${error}" class="msg err"></p>
+
+    <!--
+      th:object 로 서버에서 내려온 DTO(form)를 바인딩합니다.
+      th:field="*{intro1}" 는 name="intro1" value="..." 를 자동 세팅해요.
+      action URL은 컨트롤러 @PostMapping 과 일치해야 합니다.
+    -->
+    <form th:action="@{/student/introduction}" method="post" th:object="${form}" id="introForm">
+
+        <!-- 1) 자기소개 1 -->
+        <section class="group">
+            <div class="label">
+                <strong>자기소개 1</strong>
+                <!-- 남은 글자 수 표시 -->
+                <span class="counter"><span id="count1">0</span> / 500</span>
+            </div>
+            <textarea id="intro1" th:field="*{intro1}" maxlength="500"
+                      placeholder="예: 저는 팀워크를 중요하게 생각하며, 프로젝트에서는 ..."></textarea>
+        </section>
+
+        <!-- 2) 자기소개 2 -->
+        <section class="group">
+            <div class="label">
+                <strong>자기소개 2</strong>
+                <span class="counter"><span id="count2">0</span> / 500</span>
+            </div>
+            <textarea id="intro2" th:field="*{intro2}" maxlength="500"
+                      placeholder="예: 제가 좋아하는 기술 스택은 ..."></textarea>
+        </section>
+
+        <!-- 3) 자기소개 3 -->
+        <section class="group">
+            <div class="label">
+                <strong>자기소개 3</strong>
+                <span class="counter"><span id="count3">0</span> / 500</span>
+            </div>
+            <textarea id="intro3" th:field="*{intro3}" maxlength="500"
+                      placeholder="예: 앞으로의 목표는 ..."></textarea>
+        </section>
+
+        <!-- Spring Security 사용 시 CSRF 토큰(미사용 환경이면 무시됩니다) -->
+        <input type="hidden" th:name="${_csrf?.parameterName}" th:value="${_csrf?.token}"/>
+
+        <div class="actions">
+            <button type="submit">저장하기</button>
+        </div>
+    </form>
+</main>
+
+<script>
+    // 각 textarea의 글자 수를 실시간 표시
+    const max = 500;
+    const fields = [
+        { ta: document.getElementById('intro1'), cnt: document.getElementById('count1') },
+        { ta: document.getElementById('intro2'), cnt: document.getElementById('count2') },
+        { ta: document.getElementById('intro3'), cnt: document.getElementById('count3') },
+    ];
+
+    function updateCount(f){ f.cnt.textContent = f.ta.value.length; }
+    fields.forEach(f => {
+        updateCount(f);
+        f.ta.addEventListener('input', () => updateCount(f));
+    });
+
+    // (선택) 제출 전에 500자 초과 방지(HTML maxlength가 막아주지만 이중 안전장치)
+    document.getElementById('introForm').addEventListener('submit', (e)=>{
+        for (const f of fields) {
+            if (f.ta.value.length > max) {
+                e.preventDefault();
+                alert('자기소개는 각 500자 이하여야 합니다.');
+                f.ta.focus();
+                return;
+            }
+        }
+    });
+</script>
+
+</body>
+</html>

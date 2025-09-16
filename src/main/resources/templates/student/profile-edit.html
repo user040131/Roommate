@@ -1,0 +1,183 @@
+<!--
+  파일(권장): src/main/resources/templates/student/profile-edit.html
+
+  컨트롤러 예시(스켈레톤):
+  @Controller
+  @RequestMapping("/student/profile")
+  public class ProfileController {
+      @GetMapping("/edit")
+      public String edit(Model model) {
+          model.addAttribute("addressForm", new AddressChangeRequestForm());
+          model.addAttribute("credForm", new CredentialsUpdateForm());
+          return "student/profile-edit";
+      }
+
+      @PostMapping("/address-request")
+      public String address(@ModelAttribute("addressForm") AddressChangeRequestForm f,
+                            RedirectAttributes ra) {
+          // TODO: 저장/승인요청 로직
+          ra.addFlashAttribute("msg", "주소 변경 요청이 접수되었습니다.");
+          return "redirect:/student/profile/edit";
+      }
+  }
+
+  @Controller
+  @RequestMapping("/auth/account")
+  public class AccountController {
+      @PostMapping("/credentials")
+      public String creds(@ModelAttribute("credForm") CredentialsUpdateForm f,
+                          RedirectAttributes ra) {
+          // TODO: 현재 비밀번호 검증 후 이메일/비밀번호 업데이트
+          // 비밀번호 불일치, 중복 이메일 등의 예외는 ra.addFlashAttribute("error", "...")로 전달
+          ra.addFlashAttribute("msg", "계정 정보가 변경되었습니다. 다시 로그인해 주세요.");
+          return "redirect:/student/profile/edit";
+      }
+  }
+
+  DTO 예시(폼 바인딩 가능 형태; Lombok 사용):
+  @Data @NoArgsConstructor
+  public class AddressChangeRequestForm {
+      private String newPostalCode;
+      private String newAddress1;   // 도로명
+      private String newAddress2;   // 상세
+      private String reason;        // 변경 사유(500자)
+  }
+
+  @Data @NoArgsConstructor
+  public class CredentialsUpdateForm {
+      private String email;         // 새 이메일
+      private String currentPassword;
+      private String newPassword;
+      private String confirmPassword;
+  }
+-->
+
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>개인정보 변경</title>
+    <style>
+        :root { --sky1:#eaf6ff; --sky2:#d7efff; --card:#ffffffee; --border:#d0d7e2; --muted:#617282; --btn:#1976d2; --btn-text:#fff }
+        *{box-sizing:border-box}
+        body{margin:0; min-height:100vh; display:grid; place-items:center; background:linear-gradient(180deg,var(--sky1),var(--sky2)); font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
+        .wrap{width:min(960px,94vw); display:grid; gap:16px}
+        .card{background:var(--card); padding:20px; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,.08)}
+        h1{margin:0 0 10px} h2{margin:0 0 8px}
+        .hint{color:var(--muted); font-size:13px; margin:0 0 12px}
+        .row{display:grid; grid-template-columns:140px 1fr; gap:10px; align-items:center; margin:10px 0}
+        input[type="text"], input[type="email"], input[type="password"], textarea{
+            width:100%; padding:11px; border:1px solid var(--border); border-radius:10px; background:#f8fbff;
+        }
+        textarea{min-height:110px; resize:vertical}
+        .actions{display:flex; justify-content:flex-end; gap:8px; margin-top:12px}
+        button{padding:12px 16px; border:0; border-radius:12px; background:var(--btn); color:var(--btn-text); font-weight:800; cursor:pointer}
+        .msg{margin:6px 0; font-size:14px}
+        .ok{color:#166534} .err{color:#b91c1c}
+    </style>
+</head>
+<body>
+
+<main class="wrap">
+    <header>
+        <h1>개인정보 변경</h1>
+        <!-- Flash 메시지(성공/실패) -->
+        <p th:if="${msg}"   th:text="${msg}"   class="msg ok"></p>
+        <p th:if="${error}" th:text="${error}" class="msg err"></p>
+    </header>
+
+    <!-- ========== 1) 주소지 변경 요청 ========== -->
+    <section class="card">
+        <h2>주소지 변경 요청</h2>
+        <p class="hint">새 주소와 변경 사유를 입력해 제출하세요. 관리자 검토 후 반영됩니다.</p>
+
+        <!--
+          th:object="${addressForm}" : 컨트롤러에서 모델에 담은 DTO와 바인딩
+          th:field="*{필드}"        : name/value를 자동 매핑(폼 바인딩 핵심)
+          th:action                 : POST 엔드포인트(컨트롤러 @PostMapping 과 일치)
+        -->
+        <form th:action="@{/student/profile/address-request}" method="post" th:object="${addressForm}">
+            <div class="row">
+                <label for="newPostalCode">우편번호</label>
+                <input id="newPostalCode" th:field="*{newPostalCode}" type="text" placeholder="예: 06018" required>
+            </div>
+            <div class="row">
+                <label for="newAddress1">도로명 주소</label>
+                <input id="newAddress1" th:field="*{newAddress1}" type="text" placeholder="예: 서울특별시 강남구 테헤란로 123" required>
+            </div>
+            <div class="row">
+                <label for="newAddress2">상세 주소</label>
+                <input id="newAddress2" th:field="*{newAddress2}" type="text" placeholder="예: OO아파트 101동 202호">
+            </div>
+            <div class="row" style="grid-template-columns:140px 1fr">
+                <label for="reason">변경 사유</label>
+                <textarea id="reason" th:field="*{reason}" maxlength="500" placeholder="최대 500자 이내로 입력"></textarea>
+            </div>
+
+            <!-- CSRF (Spring Security 사용 시) -->
+            <input type="hidden" th:name="${_csrf?.parameterName}" th:value="${_csrf?.token}">
+            <div class="actions">
+                <button type="submit">주소 변경 요청 제출</button>
+            </div>
+        </form>
+    </section>
+
+    <!-- ========== 2) 이메일/비밀번호 변경 ========== -->
+    <section class="card">
+        <h2>이메일 / 비밀번호 변경</h2>
+        <p class="hint">보안을 위해 현재 비밀번호를 입력한 뒤 새 정보로 변경합니다.</p>
+
+        <!--
+          새 이메일/비밀번호 변경 폼
+          서버에서 검증: 현재 비밀번호 확인 → 이메일 중복 검사 → 비밀번호 정책 검사
+          성공 시 토큰 무효화 후 재로그인 요구하는 흐름을 권장
+        -->
+        <form th:action="@{/auth/account/credentials}" method="post" th:object="${credForm}" id="credForm">
+            <div class="row">
+                <label for="email">새 이메일</label>
+                <input id="email" th:field="*{email}" type="email" placeholder="example@domain.com" required>
+            </div>
+
+            <div class="row">
+                <label for="currentPassword">현재 비밀번호</label>
+                <input id="currentPassword" th:field="*{currentPassword}" type="password" autocomplete="current-password" required>
+            </div>
+
+            <div class="row">
+                <label for="newPassword">새 비밀번호</label>
+                <input id="newPassword" th:field="*{newPassword}" type="password" autocomplete="new-password" required>
+            </div>
+
+            <div class="row">
+                <label for="confirmPassword">새 비밀번호 확인</label>
+                <input id="confirmPassword" th:field="*{confirmPassword}" type="password" autocomplete="new-password" required>
+            </div>
+
+            <!-- CSRF -->
+            <input type="hidden" th:name="${_csrf?.parameterName}" th:value="${_csrf?.token}">
+            <div class="actions">
+                <button type="submit">계정 정보 변경</button>
+            </div>
+        </form>
+
+        <!-- 간단한 클라이언트 검증: 새 비밀번호 일치 확인 -->
+        <script>
+            document.getElementById('credForm').addEventListener('submit', function (e) {
+                const np = document.getElementById('newPassword').value;
+                const cp = document.getElementById('confirmPassword').value;
+                if (np !== cp) {
+                    e.preventDefault();
+                    alert('새 비밀번호가 일치하지 않습니다.');
+                }
+            });
+        </script>
+    </section>
+
+    <!-- (선택) 하단으로 로그인/메인 이동 링크 -->
+    <!-- <a th:href="@{/student/main}" style="text-align:center;">← 메인으로</a> -->
+
+</main>
+
+</body>
+</html>

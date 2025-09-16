@@ -9,6 +9,7 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
+import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -24,7 +25,7 @@ import seungjub270.roommate_spring.service.TokenService;
 
 import java.time.Duration;
 
-@RestController
+@Controller
 @RequiredArgsConstructor
 @RequestMapping("/auth")
 public class AuthController {
@@ -112,33 +113,84 @@ public class AuthController {
         }
     }
 
-    @GetMapping("/logout")
-    public ResponseEntity<Void> logout(HttpServletRequest request, HttpServletResponse response) {
+    @PostMapping("/logout")
+    public String logout(HttpServletRequest request, HttpServletResponse response, RedirectAttributes ra) {
         new SecurityContextLogoutHandler().logout(request, response,
                 SecurityContextHolder.getContext().getAuthentication());
-        return ResponseEntity.noContent().build(); //로그아웃 후에 로그인 창으로 redirect
+        // 2) 토큰 쿠키 만료(로그인 시 쿠키를 썼다면 함께 정리)
+        response.addHeader("Set-Cookie",
+                ResponseCookie.from("accessToken", "")
+                        .path("/").maxAge(0).build().toString());
+        response.addHeader("Set-Cookie",
+                ResponseCookie.from("refreshToken", "")
+                        .path("/auth").maxAge(0).build().toString());
+
+        // (선택) refresh 토큰을 서버 저장소(DB/Redis)에 뒀다면 무효화 처리도 해주세요.
+
+        ra.addFlashAttribute("msg", "로그아웃 되었습니다.");
+        return "redirect:/auth/login";
     }
 
+//    @PostMapping("/signup/manager")
+//    public boolean signUpManager (@RequestBody ManagerSignUpRequest req) {
+//        try {
+//            authService.makeManager(req);
+//            return true;
+//        } catch (Exception e) {
+//            System.out.println("매니저 생성 중 오류발생" + e.getMessage());
+//            e.printStackTrace();
+//            return false;
+//        }
+//    }
+//
+//    @PostMapping("/signup/student")
+//    public boolean signUpStudent (@RequestBody StudentSignUpRequest req) {
+//        try {
+//            authService.makeStudent(req);
+//            return true;
+//        } catch (Exception e) {
+//            return false;
+//        }
+//    }
+// ===== 매니저 회원가입 화면 =====
+@GetMapping("/signup/manager")
+public String signUpManagerForm(Model model) {
+    model.addAttribute("form", new ManagerSignUpRequest()); // 폼 바인딩 대상
+    return "auth/signup-manager"; // templates/auth/signup-manager.html
+}
+
+    // ===== 매니저 회원가입 처리 =====
     @PostMapping("/signup/manager")
-    public boolean signUpManager (@RequestBody ManagerSignUpRequest req) {
+    public String signUpManager(@ModelAttribute("form") ManagerSignUpRequest req,
+                                RedirectAttributes ra) {
         try {
             authService.makeManager(req);
-            return true;
+            ra.addFlashAttribute("msg", "매니저 계정이 생성되었습니다.");
         } catch (Exception e) {
-            System.out.println("매니저 생성 중 오류발생" + e.getMessage());
-            e.printStackTrace();
-            return false;
+            ra.addFlashAttribute("error", "생성 실패: " + e.getMessage());
         }
+        // PRG 패턴: 새로고침 중복 제출 방지, 메시지는 Flash로 한 번만 표시
+        return "redirect:/auth/signup/manager";
     }
 
+    // ===== 학생 회원가입 화면 =====
+    @GetMapping("/signup/student")
+    public String signUpStudentForm(Model model) {
+        model.addAttribute("form", new StudentSignUpRequest());
+        return "auth/signup-student"; // templates/auth/signup-student.html
+    }
+
+    // ===== 학생 회원가입 처리 =====
     @PostMapping("/signup/student")
-    public boolean signUpStudent (@RequestBody StudentSignUpRequest req) {
+    public String signUpStudent(@ModelAttribute("form") StudentSignUpRequest req,
+                                RedirectAttributes ra) {
         try {
             authService.makeStudent(req);
-            return true;
+            ra.addFlashAttribute("msg", "학생 계정이 생성되었습니다.");
         } catch (Exception e) {
-            return false;
+            ra.addFlashAttribute("error", "생성 실패: " + e.getMessage());
         }
+        return "redirect:/auth/signup/student";
     }
 }
 

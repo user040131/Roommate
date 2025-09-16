@@ -17,26 +17,32 @@ public class Characteristic {
     @Column
     private int sleepTime;
     //22시 이전, 22~24시, 24시 이후
+    //0, 1, 2
 
     @Column
     private int wakeUpTime;
     //6, 6~8, 8
+    //0, 1, 2
 
     @Column
     private int studyLocation;
     //indoor, outdoor
+    //0, 1
 
     @Column
     private int freeTimeLocation;
     //indoor, outdoor
+    //0, 1
 
     @Column
     private int cleanlinessLevel;
     //sensitive, insensitive
+    //0, 1
 
     @Column
     private int smellTolerance;
     //sensitive, insensitive
+    //0, 1
 
     @Column
     private boolean smokingHabit;
@@ -45,6 +51,7 @@ public class Characteristic {
     @Column
     private int noiseTolerance;
     //sensitive, insensitive
+    //0, 1
 
     @Column
     private boolean extroversion;

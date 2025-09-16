@@ -1,0 +1,186 @@
+<!--
+  파일(권장): src/main/resources/templates/manager/results.html
+
+  컨트롤러 예시:
+  @Controller
+  @RequestMapping("/manager/results")
+  public class ResultsController {
+      // 결과 페이지
+      @GetMapping
+      public String page() {
+          return "manager/results";
+      }
+
+      // 결과 생성 버튼 → 서비스에서 배정 알고리즘 실행 후 결과를 Flash 로 담아 리다이렉트(PRG)
+      @PostMapping("/generate")
+      public String generate(RedirectAttributes ra) {
+          // TODO: 배정 알고리즘 실행
+          // ManagerResultView result = resultService.generateAndReturnView();
+          // ra.addFlashAttribute("assignment", result);
+          ra.addFlashAttribute("assignment", demo()); // 데모용
+          return "redirect:/manager/results#results"; // 하단 결과 앵커로 이동
+      }
+
+      // 데모 데이터 (삭제 가능)
+      private ManagerResultView demo() {
+          // DTO 구조는 아래 record 예시 참고. 실제 구현에서 적절히 생성
+          return ManagerResultView.demo();
+      }
+  }
+
+  뷰 DTO 예시(Thymeleaf에서 읽는 필드):
+  public record ManagerResultView(String schoolName, java.util.List<DormView> dorms) {
+      public static ManagerResultView demo() {
+          return new ManagerResultView(
+              "OO대학교",
+              java.util.List.of(
+                  new DormView("A기숙사",
+                      java.util.List.of(
+                          new RoomView("401", 3, java.util.List.of(
+                              new StudentView("홍길동","20231234","a@school.ac.kr","MALE"),
+                              new StudentView("김학생","20235555","b@school.ac.kr","FEMALE")
+                          )),
+                          new RoomView("402", 2, java.util.List.of(
+                              new StudentView("박예시","20236666","c@school.ac.kr","MALE")
+                          ))
+                      )
+                  ),
+                  new DormView("B기숙사",
+                      java.util.List.of(
+                          new RoomView("201", 2, java.util.List.of(
+                              new StudentView("최샘플","20237777","d@school.ac.kr","FEMALE"),
+                              new StudentView("이데모","20238888","e@school.ac.kr","MALE")
+                          ))
+                      )
+                  )
+              )
+          );
+      }
+  }
+  public record DormView(String name, java.util.List<RoomView> rooms) {}
+  public record RoomView(String roomNumber, int capacity, java.util.List<StudentView> students) {}
+  public record StudentView(String name, String studentNo, String email, String gender) {}
+-->
+
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>배정 결과 (매니저)</title>
+    <style>
+        :root{
+            --sky1:#eaf6ff; --sky2:#d7efff; --card:#ffffffee; --bord:#d0d7e2; --muted:#5b6b7a;
+            --btn:#1976d2; --ok:#166534; --danger:#dc2626; --chip:#eef2ff;
+        }
+        *{box-sizing:border-box}
+        body{
+            margin:0; min-height:100vh; display:grid; place-items:start center;
+            background:linear-gradient(180deg,var(--sky1),var(--sky2));
+            font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+            padding:24px 12px;
+        }
+        .container{width:min(1200px,96vw); display:grid; gap:16px}
+        .card{background:var(--card); border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,.08); padding:18px}
+        h1{margin:0 0 6px} h2{margin:0 0 8px} h3{margin:10px 0 6px}
+        .hint{color:var(--muted); font-size:13px; margin:0 0 12px}
+        .toolbar{display:flex; gap:8px; flex-wrap:wrap}
+        .btn{display:inline-flex; align-items:center; justify-content:center; gap:6px;
+            padding:10px 14px; border-radius:10px; border:0; cursor:pointer; font-weight:800; color:#fff; background:var(--btn)}
+        .btn-danger{background:var(--danger)}
+        .summary{display:flex; gap:10px; flex-wrap:wrap; margin-top:6px}
+        .chip{background:var(--chip); border:1px solid #e5e7eb; padding:6px 10px; border-radius:999px; font-size:13px}
+        details{border:1px solid var(--bord); border-radius:12px; background:#fff; padding:10px 12px; margin:10px 0}
+        summary{cursor:pointer; font-weight:800}
+        table{width:100%; border-collapse:collapse; border:1px solid var(--bord); border-radius:10px; overflow:hidden; margin-top:8px}
+        th,td{border-bottom:1px solid var(--bord); padding:8px 10px; text-align:center}
+        th{background:#f1f5f9; font-weight:700}
+        .room-cap{color:#0f766e; font-weight:700}
+        .empty{color:#9a3412; background:#fff7ed; padding:8px 12px; border:1px solid #fed7aa; border-radius:10px}
+        .actions{display:flex; justify-content:flex-end; gap:8px; margin-top:10px}
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <!-- 상단: 결과 생성 버튼 -->
+    <section class="card">
+        <h1>배정 결과 생성</h1>
+        <p class="hint">버튼을 누르면 배정 알고리즘을 실행하고, <b>하단 결과 영역</b>에 기숙사/방/학생 목록이 표시됩니다.</p>
+
+        <form th:action="@{/manager/results/generate}" method="post" class="toolbar">
+            <input type="hidden" th:name="${_csrf?.parameterName}" th:value="${_csrf?.token}">
+            <button class="btn" type="submit">결과 생성</button>
+            <!-- (선택) 초기화/재생성 같은 액션이 필요하면 추가 -->
+            <!-- <button class="btn-danger" formaction="/manager/results/reset" formmethod="post" type="submit">결과 초기화</button> -->
+        </form>
+    </section>
+
+    <!-- 하단: 결과 표시(매니저 전용 결과창) -->
+    <section class="card" id="results">
+        <h2>배정 결과</h2>
+        <p class="hint" th:if="${assignment == null}">아직 생성된 결과가 없습니다. 위의 <b>결과 생성</b> 버튼을 눌러주세요.</p>
+
+        <!-- 결과 요약 -->
+        <div th:if="${assignment != null}">
+            <div class="summary">
+                <span class="chip" th:text="|학교: ${assignment.schoolName}|">학교: OO대학교</span>
+                <span class="chip" th:text="|기숙사 수: ${#lists.size(assignment.dorms)}|">기숙사 수: 0</span>
+                <!-- 총 방/총 학생 수는 서버에서 계산해 내려주면 chip으로 더 표시 가능 -->
+            </div>
+
+            <!-- 기숙사별 묶음 -->
+            <div th:each="dorm,di : ${assignment.dorms}">
+                <details open>
+                    <summary th:text="${dorm.name}">A기숙사</summary>
+
+                    <!-- 방 테이블: 각 방에 배정된 학생들 나열 -->
+                    <table>
+                        <thead>
+                        <tr>
+                            <th style="width:16%">호실</th>
+                            <th style="width:12%">정원</th>
+                            <th style="width:12%">배정</th>
+                            <th>학생 목록</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="room,ri : ${dorm.rooms}">
+                            <td th:text="${room.roomNumber}">401</td>
+                            <td class="room-cap" th:text="${room.capacity}">3</td>
+                            <td th:text="${#lists.size(room.students)}">2</td>
+                            <td>
+                                <!-- 학생들: 이름(학번, 이메일) 콤마 구분 -->
+                                <span th:if="${#lists.isEmpty(room.students)}" class="empty">배정된 학생이 없습니다.</span>
+                                <span th:if="${!#lists.isEmpty(room.students)}"
+                                      th:utext="${#strings.listJoin(room.students.![name + ' (' + studentNo + ', ' + email + ')'], ', ')}">
+                  홍길동(20231234, a@school.ac.kr), 김학생(20235555, b@school.ac.kr)
+                </span>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </details>
+            </div>
+
+            <div class="actions">
+                <button class="btn" type="button" onclick="window.print()">인쇄/저장</button>
+            </div>
+        </div>
+    </section>
+</div>
+
+<!-- 결과가 있을 때 자동으로 결과 영역으로 스크롤 -->
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    const hasResult = /*[[${assignment != null}]]*/ false;
+    if (hasResult) {
+        const el = document.getElementById('results');
+        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+    }
+    /*]]>*/
+</script>
+
+</body>
+</html>

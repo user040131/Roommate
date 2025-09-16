@@ -1,0 +1,335 @@
+<!--
+  파일(권장): src/main/resources/templates/manager/bulk-students.html
+
+  컨트롤러 스켈레톤(예시):
+  @Controller
+  @RequestMapping("/manager/accounts")
+  public class BulkAccountController {
+      @GetMapping("/bulk")
+      public String page(Model model) { return "manager/bulk-students"; }
+
+      @PostMapping("/bulk")
+      public String submit(@RequestParam("studentsJson") String studentsJson,
+                           RedirectAttributes ra) {
+          // TODO: ObjectMapper로 파싱 후 일괄 생성
+          // record NewStudent(String email,String password,String name,String phone,String studentNo,String gender,String address){}
+          // List<NewStudent> rows = om.readValue(studentsJson, new TypeReference<>(){});
+          // 유효성/중복 검사 → 생성 → 결과 요약 flash
+          ra.addFlashAttribute("msg", "일괄 생성 요청을 접수했습니다.");
+          return "redirect:/manager/accounts/bulk";
+      }
+  }
+
+  CSV 헤더 예시(복붙/업로드용):
+  email,password,name,phone,studentNo,gender,address
+  a@school.ac.kr,Passw0rd!,홍길동,010-1234-5678,20231234,M,서울시 강남구 ...
+-->
+
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>학생 계정 대량 생성 (매니저)</title>
+    <style>
+        :root{--sky1:#eaf6ff;--sky2:#d7efff;--card:#ffffffee;--muted:#5b6b7a;--bord:#d0d7e2;
+            --btn:#1976d2;--btn2:#0ea5e9;--danger:#dc2626;--ok:#166534;--warn:#9a3412}
+        *{box-sizing:border-box}
+        body{margin:0;min-height:100vh;display:grid;place-items:start center;background:linear-gradient(180deg,var(--sky1),var(--sky2));font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;padding:24px 12px}
+        .container{width:min(1200px,96vw);display:grid;gap:16px}
+        .card{background:var(--card);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.08);padding:18px}
+        h1{margin:0 0 6px} h2{margin:0 0 8px}
+        .hint{color:var(--muted);font-size:13px;margin:0 0 12px}
+        .msg{font-size:14px;margin:4px 0;color:var(--ok)}
+        .toolbar{display:flex;flex-wrap:wrap;gap:8px}
+        .btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:10px;border:0;cursor:pointer;font-weight:800;color:#fff;background:var(--btn)}
+        .btn2{background:var(--btn2)} .btn-danger{background:var(--danger)} .btn-muted{background:#64748b}
+        table{width:100%;border-collapse:collapse;border:1px solid var(--bord);border-radius:10px;overflow:hidden}
+        th,td{border-bottom:1px solid var(--bord);padding:8px 10px;text-align:center}
+        th{background:#f1f5f9;font-weight:700}
+        input[type="text"], input[type="email"], input[type="password"]{width:100%;padding:8px;border:1px solid var(--bord);border-radius:8px;background:#f8fbff}
+        .status{font-size:12px}
+        tr.error td{background:#fff1f2}        /* 오류 행 붉은 톤 */
+        tr.ok td{background:#f0fdf4}           /* 정상 행 초록 톤 */
+        .flex{display:flex;gap:8px;align-items:center}
+        .right{justify-content:flex-end}
+        details[open] summary{margin-bottom:8px}
+        summary{cursor:pointer}
+        .paste{width:100%;min-height:120px;border:1px dashed var(--bord);border-radius:8px;padding:10px;background:#fff}
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>학생 계정 대량 생성</h1>
+        <p class="hint">엑셀에서 붙여넣기 / CSV 업로드 / 직접 입력 중 편한 방법으로 데이터를 채워 넣으세요. 제출 시 <b>유효한 행만</b> 서버로 전송됩니다.</p>
+        <p class="msg" th:if="${msg}" th:text="${msg}"></p>
+    </header>
+
+    <!-- 1) 데이터 입력 도구 -->
+    <section class="card">
+        <h2>1) 데이터 입력</h2>
+        <div class="toolbar">
+            <button class="btn" type="button" id="btnAddRow">+ 행 추가</button>
+            <button class="btn2" type="button" id="btnAdd10">+ 10행</button>
+            <button class="btn-muted" type="button" id="btnClear">모두 지우기</button>
+            <button class="btn2" type="button" id="btnImportCsv">CSV 업로드</button>
+            <input id="fileCsv" type="file" accept=".csv" style="display:none">
+            <a class="btn" id="btnTemplate" download="students-template.csv">CSV 템플릿</a>
+        </div>
+
+        <details style="margin-top:10px">
+            <summary>엑셀/스프레드시트에서 붙여넣기 (클릭)</summary>
+            <p class="hint">엑셀에서 7열(<b>email,password,name,phone,studentNo,gender,address</b>)을 복사하여 아래 박스에 붙여넣으면 됩니다.</p>
+            <textarea id="pasteBox" class="paste" placeholder="여기에 붙여넣기 (탭/쉼표 구분 자동 인식)"></textarea>
+            <div class="flex right"><button class="btn2" type="button" id="btnParsePaste">붙여넣기 추가</button></div>
+        </details>
+    </section>
+
+    <!-- 2) 데이터 표 -->
+    <section class="card">
+        <h2>2) 미리보기/검증</h2>
+        <p class="hint">성별은 M/F, 남/여, male/female 모두 인식합니다. 전화번호는 숫자/하이픈 허용. 비밀번호는 6자 이상.</p>
+
+        <div style="overflow:auto">
+            <table id="grid">
+                <thead>
+                <tr>
+                    <th>#</th>
+                    <th>email</th>
+                    <th>password</th>
+                    <th>name</th>
+                    <th>phone</th>
+                    <th>studentNo</th>
+                    <th>gender</th>
+                    <th>address</th>
+                    <th>상태</th>
+                    <th>행삭제</th>
+                </tr>
+                </thead>
+                <tbody id="tbody">
+                <!-- JS가 행을 생성합니다 -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="flex right" style="margin-top:10px">
+            <button class="btn-muted" type="button" id="btnValidate">검증</button>
+            <button class="btn2" type="button" id="btnKeepValid">유효 행만 남기기</button>
+        </div>
+    </section>
+
+    <!-- 3) 제출 -->
+    <section class="card">
+        <h2>3) 제출</h2>
+        <form th:action="@{/manager/accounts/bulk}" method="post" id="bulkForm">
+            <input type="hidden" name="studentsJson" id="studentsJson">
+            <input type="hidden" th:name="${_csrf?.parameterName}" th:value="${_csrf?.token}">
+            <div class="flex right">
+                <button class="btn" type="submit" id="btnSubmit">유효한 행 일괄 생성</button>
+            </div>
+        </form>
+        <p class="hint">※ 제출 시 표에서 <b>유효</b>로 표시된 행만 포함됩니다.</p>
+    </section>
+</div>
+
+<script>
+    /* ========== 유틸 ========== */
+    const $ = (s, el=document)=>el.querySelector(s);
+    const $$ = (s, el=document)=>Array.from(el.querySelectorAll(s));
+    const gridBody = $('#tbody');
+
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
+
+    function normalizeGender(v){
+        if(!v) return null;
+        v = String(v).trim().toLowerCase();
+        if(['m','male','남','남자'].includes(v)) return 'MALE';
+        if(['f','female','여','여자'].includes(v)) return 'FEMALE';
+        return null;
+    }
+
+    function rowData(tr){
+        const cells = tr.querySelectorAll('input');
+        const get = (name)=> tr.querySelector(`input[name="${name}"]`)?.value?.trim() ?? '';
+        return {
+            email: get('email'),
+            password: get('password'),
+            name: get('name'),
+            phone: get('phone'),
+            studentNo: get('studentNo'),
+            gender: get('gender'),
+            address: get('address')
+        };
+    }
+
+    function validateRow(tr){
+        const d = rowData(tr);
+        let ok = true, msgs=[];
+
+        if(!emailRe.test(d.email)){ ok=false; msgs.push('이메일 형식'); }
+        if((d.password||'').length < 6){ ok=false; msgs.push('비번 6+자'); }
+        if(!d.name){ ok=false; msgs.push('이름'); }
+        if(!d.phone){ ok=false; msgs.push('휴대폰'); }
+        if(!d.studentNo){ ok=false; msgs.push('학번'); }
+
+        const g = normalizeGender(d.gender);
+        if(!g){ ok=false; msgs.push('성별'); }
+        else d.gender = g; // 정규화
+
+        if(!d.address){ ok=false; msgs.push('주소'); }
+
+        // status 셀 업데이트
+        const st = tr.querySelector('.status');
+        if(ok){ st.textContent = '유효'; tr.classList.remove('error'); tr.classList.add('ok'); }
+        else { st.textContent = '오류: ' + msgs.join(', '); tr.classList.remove('ok'); tr.classList.add('error'); }
+
+        return {ok, data:d};
+    }
+
+    function renumber(){
+        $$('#tbody tr').forEach((tr, i)=> tr.querySelector('.idx').textContent = String(i+1));
+    }
+
+    function addRow(prefill={}){
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+      <td class="idx">0</td>
+      <td><input name="email" type="email"  placeholder="a@school.ac.kr" value="${prefill.email||''}"></td>
+      <td><input name="password" type="text" placeholder="비밀번호" value="${prefill.password||''}"></td>
+      <td><input name="name" type="text" placeholder="이름" value="${prefill.name||''}"></td>
+      <td><input name="phone" type="text" placeholder="010-0000-0000" value="${prefill.phone||''}"></td>
+      <td><input name="studentNo" type="text" placeholder="학번" value="${prefill.studentNo||''}"></td>
+      <td><input name="gender" type="text" placeholder="M/F/남/여" value="${prefill.gender||''}"></td>
+      <td><input name="address" type="text" placeholder="주소" value="${prefill.address||''}"></td>
+      <td class="status"></td>
+      <td><button type="button" class="btn-danger btnDel" style="padding:6px 10px;border-radius:8px">삭제</button></td>
+    `;
+        gridBody.appendChild(tr);
+        renumber();
+        return tr;
+    }
+
+    function addRows(n){ for(let i=0;i<n;i++) addRow(); }
+
+    /* 초기 5행 */
+    addRows(5);
+
+    /* ========== 툴바 동작 ========== */
+    $('#btnAddRow').addEventListener('click', ()=> addRow());
+    $('#btnAdd10').addEventListener('click', ()=> addRows(10));
+    $('#btnClear').addEventListener('click', ()=> { gridBody.innerHTML=''; addRows(5); });
+
+    /* 삭제 위임 */
+    gridBody.addEventListener('click', (e)=>{
+        if(e.target.closest('.btnDel')){ e.target.closest('tr')?.remove(); renumber(); }
+    });
+
+    /* 검증 */
+    function validateAll(){
+        const trs = $$('#tbody tr');
+        let okCount=0;
+        trs.forEach(tr=>{
+            // 성별 필드는 화면에는 원문 그대로 두되, 전송 직전에만 정규화해 주기 위해
+            // validateRow에서 정규화한 값은 status 내부에서만 사용. 화면 input 값은 수정하지 않음.
+            const {ok} = validateRow(tr);
+            if(ok) okCount++;
+        });
+        return okCount;
+    }
+    $('#btnValidate').addEventListener('click', ()=> {
+        const ok = validateAll();
+        alert(`유효 행: ${ok} / 총 ${$('#tbody').rows.length}`);
+    });
+
+    /* 유효 행만 남기기 */
+    $('#btnKeepValid').addEventListener('click', ()=>{
+        $$('#tbody tr').forEach(tr=> { if(!validateRow(tr).ok) tr.remove(); });
+        renumber();
+    });
+
+    /* CSV 템플릿 (data URI로 동적 링크) */
+    (function(){
+        const headers = 'email,password,name,phone,studentNo,gender,address\n';
+        const sample  = 'a@school.ac.kr,Passw0rd!,홍길동,010-1234-5678,20231234,M,서울시 강남구 ...\n';
+        const uri = 'data:text/csv;charset=utf-8,'+encodeURIComponent(headers+sample);
+        $('#btnTemplate').setAttribute('href', uri);
+    })();
+
+    /* CSV 업로드 */
+    $('#btnImportCsv').addEventListener('click', ()=> $('#fileCsv').click());
+    $('#fileCsv').addEventListener('change', (e)=>{
+        const file = e.target.files[0]; if(!file) return;
+        const reader = new FileReader();
+        reader.onload = ()=> {
+            const text = reader.result;
+            importFromText(text);
+            e.target.value = '';
+        };
+        reader.readAsText(file, 'utf-8');
+    });
+
+    /* 붙여넣기 파싱 */
+    $('#btnParsePaste').addEventListener('click', ()=>{
+        const text = $('#pasteBox').value;
+        importFromText(text);
+        $('#pasteBox').value = '';
+    });
+
+    /* 텍스트 → 행들 추가 (CSV/TSV 자동 인식) */
+    function importFromText(text){
+        if(!text) return;
+        // 구분자 탐지: 탭이 있으면 TSV, 아니면 CSV
+        const delim = text.includes('\t') ? '\t' : ',';
+        const lines = text.trim().split(/\r?\n/);
+        // 헤더가 있다면 스킵(첫 줄에 email/password 등이 들어있으면)
+        let startIdx = 0;
+        if(/email/i.test(lines[0]) && /password/i.test(lines[0])) startIdx = 1;
+
+        for(let i=startIdx;i<lines.length;i++){
+            const parts = splitCsv(lines[i], delim);
+            // 기대 컬럼수 7
+            const [email,password,name,phone,studentNo,gender,address] =
+                [0,1,2,3,4,5,6].map(k => (parts[k] ?? '').trim());
+            const tr = addRow({email,password,name,phone,studentNo,gender,address});
+            validateRow(tr);
+        }
+    }
+
+    // 단순 CSV/TSV 분리(따옴표 감싼 필드 처리)
+    function splitCsv(line, delim=','){
+        const out=[], re = new RegExp(`\\s*("(?:[^"]|"")+"|[^${delim}]*)\\s*(?:${delim}|$)`, 'g');
+        line.replace(re, (m, field) => {
+            if(field === undefined) return;
+            if(field.startsWith('"') && field.endsWith('"')){
+                field = field.slice(1,-1).replace(/""/g,'"');
+            }
+            out.push(field);
+        });
+        return out;
+    }
+
+    /* 제출: 유효한 행만 JSON으로 직렬화 */
+    $('#bulkForm').addEventListener('submit', (e)=>{
+        const trs = $$('#tbody tr');
+        if(trs.length===0){ e.preventDefault(); return alert('행이 없습니다.'); }
+
+        const payload=[];
+        trs.forEach(tr=>{
+            const {ok, data} = validateRow(tr);
+            if(ok){
+                // 최종 전송 직전에 성별 정규화 확정
+                data.gender = normalizeGender(data.gender);
+                payload.push(data);
+            }
+        });
+        if(payload.length===0){ e.preventDefault(); return alert('유효한 행이 없습니다.'); }
+
+        $('#studentsJson').value = JSON.stringify(payload);
+        // 그대로 submit 진행
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,329 @@
+<!--
+  파일(권장): src/main/resources/templates/manager/settings.html
+
+  컨트롤러 스켈레톤 예시:
+  @Controller
+  @RequestMapping("/manager")
+  public class SettingsController {
+      @GetMapping("/settings")
+      public String page(Model model) {
+          model.addAttribute("form", new SchoolSettingsForm()); // schoolName, postalCode, address1, address2
+          return "manager/settings";
+      }
+
+      @PostMapping("/settings")
+      public String submit(@ModelAttribute("form") SchoolSettingsForm form,
+                           @RequestParam("dormsJson") String dormsJson,
+                           RedirectAttributes ra) {
+          // TODO: dormsJson을 Jackson으로 파싱해 저장
+          // ObjectMapper om = new ObjectMapper();
+          // SchoolSettingsPayload payload = om.readValue(dormsJson, SchoolSettingsPayload.class);
+          ra.addFlashAttribute("msg", "학교 설정이 저장되었습니다.");
+          return "redirect:/manager/settings";
+      }
+  }
+
+  폼 DTO 예시(폼 바인딩 가능 형태):
+  @Data @NoArgsConstructor
+  public class SchoolSettingsForm {
+      private String schoolName;
+      private String postalCode;
+      private String address1; // 도로명
+      private String address2; // 상세
+  }
+
+  서버로 보내는 dormsJson의 구조 예시:
+  {
+    "schoolName":"OO대",
+    "postalCode":"06018",
+    "address1":"서울 강남구 ...",
+    "address2":"상세",
+    "dorms":[
+      {
+        "name":"A기숙사",
+        "floors":[
+          {
+            "floor":4,
+            "startSuffix":1,
+            "endSuffix":20,
+            "rooms":[ {"roomNumber":"401","capacity":2}, {"roomNumber":"402","capacity":2} ... ]
+          }
+        ]
+      }
+    ]
+  }
+-->
+
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>학교 설정 (매니저)</title>
+    <style>
+        :root{
+            --sky1:#eaf6ff; --sky2:#d7efff; --card:#ffffffee; --muted:#5b6b7a; --bord:#d0d7e2;
+            --btn:#1976d2; --btn2:#0ea5e9; --danger:#dc2626; --ok:#166534;
+        }
+        *{box-sizing:border-box}
+        body{
+            margin:0; min-height:100vh; display:grid; place-items:start center;
+            background:linear-gradient(180deg,var(--sky1),var(--sky2));
+            font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; padding:24px 12px;
+        }
+        .container{width:min(1100px,96vw); display:grid; gap:16px}
+        .card{background:var(--card); border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,.08); padding:18px}
+        h1{margin:0 0 6px} h2{margin:0 0 8px}
+        .hint{color:var(--muted); font-size:13px; margin:0 0 12px}
+        .row{display:grid; grid-template-columns:140px 1fr; gap:10px; align-items:center; margin:10px 0}
+        input[type="text"], input[type="number"]{
+            width:100%; padding:11px; border:1px solid var(--bord); border-radius:10px; background:#f8fbff;
+        }
+        .grid-2{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+        .grid-3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px}
+        .btn{display:inline-flex; align-items:center; justify-content:center; gap:6px;
+            padding:10px 14px; border-radius:10px; border:0; cursor:pointer; font-weight:800; color:#fff; background:var(--btn)}
+        .btn2{background:var(--btn2)}
+        .btn-danger{background:var(--danger)}
+        .msg{font-size:14px; margin:4px 0}
+        .ok{color:var(--ok)}
+        table{width:100%; border-collapse:collapse; border:1px solid var(--bord); border-radius:10px; overflow:hidden; margin-top:8px}
+        th,td{border-bottom:1px solid var(--bord); padding:8px 10px; text-align:center}
+        th{background:#f1f5f9; font-weight:700}
+        .dorm-card{border:1px solid var(--bord); border-radius:12px; padding:12px; background:#fff; margin:8px 0}
+        .floor-card{border:1px dashed var(--bord); border-radius:10px; padding:10px; background:#fcfeff; margin-top:10px}
+        .flex{display:flex; gap:8px; align-items:center}
+        .right{justify-content:flex-end}
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>학교 설정(매니저)</h1>
+        <p class="hint">학교 기본정보(이름/주소)를 입력하고, 기숙사를 추가한 뒤 “층 → 호실 범위 → 방별 인원”을 지정하세요.</p>
+        <p class="msg ok" th:if="${msg}" th:text="${msg}"></p>
+    </header>
+
+    <!-- ✅ 폼 하나로 모든 설정을 제출 -->
+    <form th:action="@{/manager/settings}" method="post" th:object="${form}" id="settingsForm">
+        <!-- CSRF -->
+        <input type="hidden" th:name="${_csrf?.parameterName}" th:value="${_csrf?.token}"/>
+
+        <!-- 1) 학교 기본 정보 (주소만, 위/경도 제거) -->
+        <section class="card">
+            <h2>1) 학교 정보</h2>
+            <div class="row">
+                <label for="schoolName">학교명</label>
+                <input id="schoolName" th:field="*{schoolName}" type="text" placeholder="예: OO대학교" required>
+            </div>
+            <div class="grid-3">
+                <div class="row" style="grid-template-columns:100px 1fr">
+                    <label for="postalCode">우편번호</label>
+                    <input id="postalCode" th:field="*{postalCode}" type="text" placeholder="예: 06018" required>
+                </div>
+                <div class="row" style="grid-template-columns:100px 1fr">
+                    <label for="address1">도로명 주소</label>
+                    <input id="address1" th:field="*{address1}" type="text" placeholder="예: 서울시 강남구 테헤란로 123" required>
+                </div>
+                <div class="row" style="grid-template-columns:100px 1fr">
+                    <label for="address2">상세 주소</label>
+                    <input id="address2" th:field="*{address2}" type="text" placeholder="예: OO관 101호">
+                </div>
+            </div>
+            <p class="hint">※ 좌표는 쓰지 않습니다. 주소 텍스트만 저장합니다.</p>
+        </section>
+
+        <!-- 2) 기숙사/층/방 설정 -->
+        <section class="card">
+            <h2>2) 기숙사/층/방 설정</h2>
+            <div class="flex right">
+                <button class="btn" type="button" id="btnAddDorm">+ 기숙사 추가</button>
+            </div>
+            <div id="dorms"></div>
+            <p class="hint">층 카드에서 “호실 범위 (예: 01~20)”를 지정하고 [방 표 생성/재생성]을 누르면 해당 층의 방 목록이 만들어집니다.</p>
+        </section>
+
+        <!-- 3) 제출 -->
+        <section class="card">
+            <input type="hidden" name="dormsJson" id="dormsJson">
+            <div class="flex right">
+                <button class="btn" type="submit">설정 저장</button>
+            </div>
+        </section>
+    </form>
+</div>
+
+<script>
+    /***********************
+     * 유틸
+     ************************/
+    const $ = (sel, el=document) => el.querySelector(sel);
+    const $$ = (sel, el=document) => Array.from(el.querySelectorAll(sel));
+
+    /***********************
+     * 기숙사/층/방 동적 UI
+     ************************/
+    const dormsEl = $('#dorms');
+
+    // 기숙사 카드 생성
+    function createDormCard() {
+        const card = document.createElement('div');
+        card.className = 'dorm-card';
+        card.innerHTML = `
+      <div class="grid-2" style="align-items:end">
+        <div class="row" style="grid-template-columns:120px 1fr">
+          <label>기숙사 이름</label>
+          <input type="text" class="dorm-name" placeholder="예: A기숙사" required>
+        </div>
+        <div class="flex right">
+          <button type="button" class="btn btn-danger btn-del-dorm">기숙사 삭제</button>
+          <button type="button" class="btn btn2 btn-add-floor">+ 층 추가</button>
+        </div>
+      </div>
+      <div class="floors"></div>
+    `;
+        return card;
+    }
+
+    // 층 카드 생성 (층 번호 + 호실 범위 + 기본 인원 + 방 테이블)
+    function createFloorCard() {
+        const floorCard = document.createElement('div');
+        floorCard.className = 'floor-card';
+        floorCard.innerHTML = `
+      <div class="grid-3" style="align-items:end">
+        <div class="row" style="grid-template-columns:120px 1fr">
+          <label>층 번호</label>
+          <input type="number" class="floor-no" min="1" step="1" value="1">
+        </div>
+        <div class="row" style="grid-template-columns:120px 1fr">
+          <label>호실 시작</label>
+          <input type="number" class="start-suffix" min="1" step="1" value="1" placeholder="예: 1 → 01로 표시">
+        </div>
+        <div class="row" style="grid-template-columns:120px 1fr">
+          <label>호실 끝</label>
+          <input type="number" class="end-suffix" min="1" step="1" value="10" placeholder="예: 20">
+        </div>
+      </div>
+
+      <div class="grid-3" style="align-items:end; margin-top:6px">
+        <div class="row" style="grid-template-columns:120px 1fr">
+          <label>기본 인원/방</label>
+          <input type="number" class="default-cap" min="1" step="1" value="2">
+        </div>
+        <div class="flex right">
+          <button type="button" class="btn btn2 btn-make-rooms">방 표 생성/재생성</button>
+          <button type="button" class="btn btn-danger btn-del-floor">층 삭제</button>
+        </div>
+      </div>
+
+      <div class="rooms-wrap"></div>
+    `;
+        return floorCard;
+    }
+
+    // 방 표 생성 (예: 층=4, 시작=1, 끝=20 → 401..420)
+    function buildRoomsTable(floorCard) {
+        const floor = Math.max(0, parseInt($('.floor-no', floorCard).value || '0', 10));
+        let start = Math.max(1, parseInt($('.start-suffix', floorCard).value || '1', 10));
+        let end   = Math.max(start, parseInt($('.end-suffix', floorCard).value || String(start), 10));
+        const defCap = Math.max(1, parseInt($('.default-cap', floorCard).value || '2', 10));
+
+        const wrap = $('.rooms-wrap', floorCard);
+        let html = `
+      <table>
+        <thead><tr><th style="width:30%">호실</th><th>인원수</th></tr></thead>
+        <tbody>
+    `;
+        for (let s = start; s <= end; s++) {
+            const suffix = String(s).padStart(2, '0');      // 1 → "01"
+            const roomNo = `${floor}${suffix}`;             // 4 + "01" → "401"
+            html += `
+        <tr>
+          <td>${roomNo}</td>
+          <td><input type="number" class="room-cap" min="1" step="1" value="${defCap}" data-room="${roomNo}" style="width:120px"></td>
+        </tr>
+      `;
+        }
+        html += `</tbody></table>`;
+        wrap.innerHTML = html;
+    }
+
+    // 이벤트 바인딩
+    $('#btnAddDorm').addEventListener('click', () => {
+        dormsEl.appendChild(createDormCard());
+    });
+
+    dormsEl.addEventListener('click', (e) => {
+        const dormCard = e.target.closest('.dorm-card');
+
+        if (e.target.closest('.btn-del-dorm')) {
+            dormCard?.remove();
+            return;
+        }
+        if (e.target.closest('.btn-add-floor')) {
+            $('.floors', dormCard).appendChild(createFloorCard());
+            return;
+        }
+
+        const floorCard = e.target.closest('.floor-card');
+        if (!floorCard) return;
+
+        if (e.target.closest('.btn-del-floor')) {
+            floorCard.remove();
+            return;
+        }
+        if (e.target.closest('.btn-make-rooms')) {
+            buildRoomsTable(floorCard);
+            return;
+        }
+    });
+
+    /***********************
+     * 제출 시 JSON 만들기
+     ************************/
+    $('#settingsForm').addEventListener('submit', (e) => {
+        // 기본 검증
+        if (!$('#schoolName').value.trim()) { e.preventDefault(); return alert('학교명을 입력하세요.'); }
+        if (!$('#postalCode').value.trim())  { e.preventDefault(); return alert('우편번호를 입력하세요.'); }
+        if (!$('#address1').value.trim())    { e.preventDefault(); return alert('도로명 주소를 입력하세요.'); }
+
+        // 기숙사 수집
+        const dorms = $$('.dorm-card').map(dormCard => {
+            const name = $('.dorm-name', dormCard).value.trim();
+            const floors = $$('.floor-card', dormCard).map(floorCard => {
+                const floor = parseInt($('.floor-no', floorCard).value || '0', 10);
+                const startSuffix = parseInt($('.start-suffix', floorCard).value || '1', 10);
+                const endSuffix   = parseInt($('.end-suffix', floorCard).value   || String(startSuffix), 10);
+
+                const rooms = $$('.room-cap', floorCard).map(inp => ({
+                    roomNumber: inp.dataset.room,                                 // "401" 처럼 문자열
+                    capacity:   Math.max(1, parseInt(inp.value || '1', 10))
+                }));
+
+                return { floor, startSuffix, endSuffix, rooms };
+            });
+            return { name, floors };
+        });
+
+        const payload = {
+            schoolName: $('#schoolName').value.trim(),
+            postalCode: $('#postalCode').value.trim(),
+            address1:   $('#address1').value.trim(),
+            address2:   $('#address2').value.trim(),
+            dorms
+        };
+
+        // hidden에 JSON 문자열 심기 → 서버에서 @RequestParam("dormsJson") 로 받음
+        $('#dormsJson').value = JSON.stringify(payload);
+
+        // (선택) 방 테이블 미생성 층이 있는지 안내
+        const unbuilt = $$('.floor-card').filter(fc => $$('.room-cap', fc).length === 0).length;
+        if (unbuilt > 0 && !confirm('일부 층은 [방 표 생성/재생성]을 아직 누르지 않았습니다. 그대로 저장할까요?')) {
+            e.preventDefault();
+        }
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,80 @@
+<!--
+  파일: src/main/resources/templates/student/result.html
+
+  컨트롤러 예시:
+  @Controller
+  @RequestMapping("/student")
+  public class ResultController {
+      @GetMapping("/result")
+      public String result(Model model) {
+          // 예: A기숙사 402호 3인실
+          // model.addAttribute("result", new FinalAssignmentView("A기숙사", "402", 3));
+          return "student/result";
+      }
+  }
+
+  DTO 예시 (기숙사명 추가):
+  public record FinalAssignmentView(String dormName, String roomNumber, int occupants) {}
+-->
+
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>최종 결과 확인</title>
+    <style>
+        :root { --sky1:#eaf6ff; --sky2:#d7efff; --card:#ffffffee; --muted:#64748b }
+        *{box-sizing:border-box}
+        body{
+            margin:0; min-height:100vh; display:grid; place-items:center;
+            background:linear-gradient(180deg,var(--sky1),var(--sky2));
+            font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+        }
+        .card{
+            width:min(560px,92vw); background:var(--card); padding:28px 24px;
+            border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,.08); text-align:center;
+        }
+        h1{margin:0 0 8px 0}
+        p.sub{margin:0 0 18px 0; color:var(--muted); font-size:14px}
+
+        .result{margin:8px 0 0; padding:28px 18px; border-radius:14px; background:#f0fdf4; border:1px solid #bbf7d0}
+        .line-dorm{font-size:28px; font-weight:900; color:#166534; letter-spacing:.2px}
+        .line-room{font-size:40px; font-weight:900; color:#166534; letter-spacing:.5px}
+        .line-occ {font-size:20px; font-weight:700; color:#065f46; opacity:.9}
+
+        .pending{margin:8px 0 0; padding:24px; border-radius:14px; background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; font-weight:600}
+
+        .actions{margin-top:18px; display:flex; gap:8px; justify-content:center}
+        a.btn{display:inline-block; padding:12px 16px; border-radius:12px; text-decoration:none; background:#1976d2; color:#fff; font-weight:800}
+    </style>
+</head>
+<body>
+
+<main class="card">
+    <h1>최종 배정 결과</h1>
+    <p class="sub">배정된 기숙사/호실/인실을 확인하세요.</p>
+
+    <!-- 결과가 있을 때 -->
+    <section class="result" th:if="${result != null}">
+        <!-- 어느 기숙사 -->
+        <div class="line-dorm" th:text="${result.dormName}">A기숙사</div>
+        <!-- 몇 호실 -->
+        <div class="line-room"><span th:text="${result.roomNumber}">402</span>호</div>
+        <!-- 몇 인실 -->
+        <div class="line-occ"><span th:text="${result.occupants}">3</span>인실</div>
+    </section>
+
+    <!-- 결과가 아직 없을 때 -->
+    <section class="pending" th:if="${result == null}">
+        아직 최종 배정 결과가 확정되지 않았습니다. 확정되면 이 화면에서 바로 확인할 수 있어요.
+    </section>
+
+    <div class="actions">
+        <a class="btn" th:href="@{/student/main}">메인으로</a>
+    </div>
+</main>
+
+</body>
+</html>
+

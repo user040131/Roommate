@@ -1,3 +1,19 @@
+<!--
+  파일 위치(권장): src/main/resources/templates/manager/main.html
+
+  컨트롤러 예시:
+  @Controller
+  @RequestMapping("/manager")
+  public class ManagerPageController {
+      @GetMapping("/main") public String main() { return "manager/main"; }
+      // 아래 링크는 프로젝트 라우트에 맞게 자유롭게 교체
+      // @GetMapping("/settings") ...
+      // @GetMapping("/accounts/create") ...
+      // @GetMapping("/results") ...
+      // @GetMapping("/profile/change-responses") ...
+  }
+-->
+
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <head>
@@ -5,32 +21,92 @@
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <title>Manager Main</title>
     <style>
-        :root { --sky:#e3f2fd; --btn:#1976d2; --btn-text:#fff; --card:#ffffffee; }
-        *{box-sizing:border-box}
-        body{margin:0; min-height:100vh; display:grid; place-items:center; background:var(--sky); font-family:system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
-        .card{width:min(540px,92vw); background:var(--card); padding:28px; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,.1); text-align:center}
-        h1{margin:0 0 6px 0}
-        p.sub{margin:0 0 16px 0; color:#475569}
-        .grid{display:grid; grid-template-columns:1fr 1fr; gap:12px}
-        a.btn, button.btn{display:inline-block; width:100%; padding:14px 16px; border-radius:12px; text-decoration:none; background:var(--btn); color:var(--btn-text); font-weight:700; border:0; cursor:pointer}
-        form{margin:0}
+        /* ====== 파스텔 하늘색 배경 + 가운데 카드 ====== */
+        :root {
+            --sky-start: #eaf6ff;
+            --sky-end:   #d7efff;
+            --card:      #ffffffee;
+            --btn:       #1976d2;
+            --btn-text:  #fff;
+            --muted:     #5b6b7a;
+        }
+        * { box-sizing: border-box }
+        body {
+            margin: 0; min-height: 100vh;
+            display: grid; place-items: center;
+            background: linear-gradient(180deg, var(--sky-start), var(--sky-end));
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+        }
+        .card {
+            width: min(520px, 92vw);
+            background: var(--card);
+            padding: 28px 24px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,.1);
+            text-align: center;
+        }
+        h1 { margin: 0 0 6px 0 }
+        p.sub { margin: 0 0 18px 0; color: var(--muted); font-size: 14px }
+
+        /* 버튼 1열(세로) 스택 */
+        .stack {
+            display: flex; flex-direction: column;
+            gap: 12px; align-items: stretch;
+        }
+        a.btn, button.btn {
+            display: inline-block; width: 100%;
+            padding: 14px 16px; border-radius: 12px;
+            text-decoration: none; background: var(--btn); color: var(--btn-text);
+            font-weight: 700; border: 0; cursor: pointer;
+        }
+
+        /* 왼쪽 하단 작은 로그아웃 버튼 (학생 메인과 동일 위치) */
+        .logout {
+            position: fixed; left: 16px; bottom: 16px;
+        }
+        .logout button {
+            padding: 8px 12px; font-weight: 600; font-size: 12px;
+            border-radius: 10px; background: #3b82f6; color: #fff; border: 0; cursor: pointer; opacity: .9;
+        }
     </style>
 </head>
 <body>
+
 <main class="card">
     <h1>매니저 메인</h1>
+
+    <!--
+      #authentication.name : spring-security + thymeleaf-extras 사용 시 현재 로그인 아이디.
+      해당 의존성이 없으면 컨트롤러에서 model.addAttribute("username", ...) 후 th:text="${username}" 로 출력.
+    -->
     <p class="sub" th:text="${#authentication?.name}">로그인 사용자</p>
 
-    <section class="grid">
-        <a class="btn" th:href="@{/manager/dashboard}">대시보드</a>
-        <a class="btn" th:href="@{/manager/rooms}">방/배정 관리</a>
-        <a class="btn" th:href="@{/manager/accounts}">학생 계정 관리</a>
+    <!--
+      버튼 4개, 텍스트만 요청대로 수정.
+      th:href 경로는 예시이므로 프로젝트 라우트에 맞게 바꾸면 됨.
+      (예: 학교 설정 → /manager/settings)
+    -->
+    <section class="stack">
+        <!-- 1) 학교 설정 -->
+        <a class="btn" th:href="@{/manager/settings}">학교 설정</a>
 
-        <form th:action="@{/auth/logout}" method="post">
-            <input type="hidden" th:name="${_csrf?.parameterName}" th:value="${_csrf?.token}"/>
-            <button class="btn" type="submit">로그아웃</button>
-        </form>
+        <!-- 2) 계정 생성 -->
+        <a class="btn" th:href="@{/manager/accounts/create}">계정 생성</a>
+
+        <!-- 3) 결과 생성 및 확인 -->
+        <a class="btn" th:href="@{/manager/results}">결과 생성 및 확인</a>
+
+        <!-- 4) 개인정보 변경 응답 -->
+        <a class="btn" th:href="@{/manager/profile/change-responses}">개인정보 변경 응답</a>
     </section>
 </main>
+
+<!-- 로그아웃: 위치/동작 학생 메인과 동일 (POST 권장, CSRF 토큰 포함) -->
+<form class="logout" th:action="@{/auth/logout}" method="post">
+    <!-- Spring Security 사용 시 자동 주입되는 CSRF 토큰. 미사용 환경이면 무시됨. -->
+    <input type="hidden" th:name="${_csrf?.parameterName}" th:value="${_csrf?.token}"/>
+    <button type="submit">로그아웃</button>
+</form>
+
 </body>
 </html>
