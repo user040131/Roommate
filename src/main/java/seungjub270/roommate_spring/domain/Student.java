@@ -110,7 +110,7 @@ public class Student {
         s.studentGender = studentGender;
         s.studentAddress = studentAddress;
         s.studentDistance = studentDistance;
-        s.appointAccount(account);
+        s.appointAccount(account); //email, pw, auth, school
         return s;
     }
 

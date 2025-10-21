@@ -182,8 +182,7 @@ public String signUpManagerForm(Model model) {
 
     // ===== 학생 회원가입 처리 =====
     @PostMapping("/signup/student")
-    public String signUpStudent(@ModelAttribute("form") StudentSignUpRequest req,
-                                RedirectAttributes ra) {
+    public String signUpStudent(@ModelAttribute("form") StudentSignUpRequest req, RedirectAttributes ra) {
         try {
             authService.makeStudent(req);
             ra.addFlashAttribute("msg", "학생 계정이 생성되었습니다.");
